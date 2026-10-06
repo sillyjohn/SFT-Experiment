@@ -1,5 +1,5 @@
 import torch
-import torch.utils.data as DataLoader,random_split, Dataset
+from torch.utils.data as DataLoader,random_split, Dataset
 
 class training_loops:
     def __init__(self, model, 
@@ -15,27 +15,38 @@ class training_loops:
         self.batch_size = batch_size
         self.train_set, self.validation_set, self.test_set = random_split(
             dataset,
-            [training_protion, validation_portion, testing_portion],
+            [training_portion, validation_portion, testing_portion],
             generator=torch.Generator().manual_seed(42) #Ensure we get the same train/validation split every time the program runs
         )
-        self.train_loader = DataLoader(train_set,batch_size,shuffle=True)
-        self.validation_loader = DataLoader(validation_set,batch_size,shuffle=True)
-        self.test_loader = DataLoader(test_set,batch_size,shuffle=True)
+        self.train_loader = DataLoader(self.train_set, self.batch_size, shuffle=True)
+        self.validation_loader = DataLoader(self.validation_set, self.batch_size, shuffle=False)
+        self.test_loader = DataLoader(self.test_set, self.batch_size, shuffle=False)
 
+
+    def samepl_train(self):
+        for epoch in range(10):
+            total_loss = 0.0
+            sample = self.dataset[0]
+            for i in range(20):
+                loss = self.model.train_step(
+                    sample["question"],
+                    sample["answer"]
+                )
+                total_loss += loss
+                print(f"Sample: Step {i + 1}: {loss:.4f}")
+            average_loss = total_loss / 20
+            print(f"Sample: Average lossL:{average_loss}")
+                
 
 
     def train(self, num_epochs = 20): # Default 20 epochs
-        self.model.train()
-        for i in range(num_epochs):
+        for epoch in range(num_epochs):
+            total_loss = 0.0
+            
             for batch in self.train_loader:
-                question = batch["question"]
-                answer = batch["answer"]
-                loss = self.model.calculate_loss(question, answer)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-            if i%10 == 0:    
-                print(f"Epoch {i+1}: Loss = {loss.item()}")
+                loss = self.model.train_step()
+                total_loss += loss
+                print(f"Step{i+1}:{loss:.4f}")
 
 
 
