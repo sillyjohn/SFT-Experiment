@@ -25,7 +25,18 @@ class training_loops:
 
 
     def train(self, num_epochs = 20): # Default 20 epochs
-        for i in num_epochs:
+        self.model.train()
+        for i in range(num_epochs):
+            for batch in self.train_loader:
+                question = batch["question"]
+                answer = batch["answer"]
+                loss = self.model.calculate_loss(question, answer)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+            if i%10 == 0:    
+                print(f"Epoch {i+1}: Loss = {loss.item()}")
+
 
 
         
