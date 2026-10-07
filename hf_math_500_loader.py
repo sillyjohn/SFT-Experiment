@@ -1,9 +1,7 @@
 from datasets import load_dataset
 
+ds = load_dataset("qwedsacf/competition_math")
 
-class Math500Loader:
-    def __init__(self):
-        self.ds = load_dataset("HuggingFaceH4/MATH-500")
-        self.question = self.ds[]  # Assuming you want to use the training split
-
-
+for split, dataset in ds.items():
+    for cache_file in dataset.cache_files:
+        print(split, cache_file["filename"])
