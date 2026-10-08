@@ -1,6 +1,7 @@
 from transformers import AutoProcessor, AutoModelForMultimodalLM
 from peft import LoraConfig, get_peft_model
 import torch
+
 class GemmaModel:
     def __init__ (self, model_id):
         self.processor = AutoProcessor.from_pretrained(model_id) # Load the processor for the specified model
@@ -34,101 +35,77 @@ class GemmaModel:
             lr=1e-4
         )
 
-    def prepare_batch(self, questions, answers, max_length =2048):
-        # Comment usage
-        Question_Answer_Pairs = []
-        Questions_Only = []
+    def prepare_batch(self, questions, answers, max_length=2048):
+        tokenizer = self.processor.tokenizer
+        tokenizer.padding_side = "right"
 
-        # Comment usage
-        for question, answer in zip(questions,answers):
-            # For Question and Answer inputs
-            full_msg = [
-                {
-                    "role":"user",
-                    "content":question
-                },
-                {
-                    "role": "assistant",
-                    "content":answer
-                }
+        full_conversations = []
+        prompt_texts = []
+
+        for question, answer in zip(questions, answers):
+            full_messages = [
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": answer}
             ]
 
-            # Comment usage
-            full_text = self.processor.apply_chat_template(
-                full_msg,
-                tokenize = False,
-                add_generation_prompt = False
+            full_conversation_text = self.processor.apply_chat_template(
+                full_messages,
+                tokenize=False,
+                add_generation_prompt=False
             )
 
-            Question_Answer_Pairs.append(full_text)
+            full_conversations.append(full_conversation_text)
 
-            # For Question only
-            prompt_msg = [
-                {
-                    "role":"user",
-                    "content":question
-                }
+            prompt_messages = [
+                {"role": "user", "content": question}
             ]
 
-            # Comment usage
             prompt_text = self.processor.apply_chat_template(
-                prompt_msg,
-                tokenize = False,
-                add_generation_prompt = True
+                prompt_messages,
+                tokenize=False,
+                add_generation_prompt=True
             )
 
-            Questions_Only.append(prompt_text)
-            
-            # Tokenize the Q&A inputs
-            qa_inputs = tokenizer(
-                Question_Answer_Pairs,
-                padding = True,
-                truncation = True,
-                max_lenght = max_lenght,
-                return_tensors = "pt",
-                add_special_tokens = False
-            )
+            prompt_texts.append(prompt_text)
 
-            # Tokenize the question only
-            tokenized_questions = tokenizer(
-                Questions_Only,
-                padding = True,
-                truncation = True,
-                max_lenght = max_lenght,
-                return_tensors = "pt",
-                add_special_tokens = False
-            )
-            
-            # Move tensors to model device
-            qa_inputs = {
-                key: value.to(self.model.device)
-                for key,value in qa_inputs.items()
-            }
+        batch_inputs = tokenizer(
+            full_conversations,
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+            return_tensors="pt",
+            add_special_tokens=False
+        )
 
-            tokenized_questions = {
-                key : value.to(self.model.device)
-                for key,value in tokenized_questions.items()
-            }
+        prompt_inputs = tokenizer(
+            prompt_texts,
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+            return_tensors="pt",
+            add_special_tokens=False
+        )
 
-            labels = qa_inputs["input_ids"].clone()
-            
-            # Ignore padding
-            labels[
-                qa_inputs["attention_mask"] == 0
-            ] = -100
+        batch_inputs = {
+            key: tensor.to(self.model.device)
+            for key, tensor in batch_inputs.items()
+        }
 
-            # Ignore prompt tokens
-            prompt_lengths = tokenized_questions["attention_mask"].sum(dim=1)
+        prompt_inputs = {
+            key: tensor.to(self.model.device)
+            for key, tensor in prompt_inputs.items()
+        }
 
-            for i, prompt_length in enumerate(
-                prompt_lengths
-            ):
-                labels[
-                    i,
-                    :prompt_length.item()
-                ] = -100
+        labels = batch_inputs["input_ids"].clone()
 
-            return qa_inputs, labels
+        labels[batch_inputs["attention_mask"] == 0] = -100
+
+        prompt_token_lengths = prompt_inputs["attention_mask"].sum(dim=1)
+
+        for sample_index, prompt_length in enumerate(prompt_token_lengths):
+            labels[sample_index, :prompt_length.item()] = -100
+
+        return batch_inputs, labels
 
     def calculate_batch_loss(self, questions, answers):
         inputs, labels = self.prepare_batch(questions,answers)
