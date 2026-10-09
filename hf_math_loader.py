@@ -2,7 +2,7 @@ from datasets import load_dataset
 from torch.utils.data import Dataset
 
 class MathDataset(Dataset):
-    def __init__(self, dataset_name="HuggingFaceH4/MATH-500", split="test"):
+    def __init__(self, dataset_name="qwedsacf/competition_math", split="train"):
         self.dataset = load_dataset(dataset_name, split=split)
         self.dataset = self.dataset.select_columns(["problem", "solution"])
 
@@ -16,3 +16,6 @@ class MathDataset(Dataset):
             "question": sample["problem"],
             "answer": sample["solution"]
         }
+
+# dataset = MathDataset()
+# print(dataset[0])

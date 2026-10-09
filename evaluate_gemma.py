@@ -10,7 +10,7 @@ from math_verify import parse, verify
 import torch
 from transformers import AutoModelForMultimodalLM, AutoProcessor
 
-from data_loader import MathDatasetLoader
+from hf_math_loader import MathDatasetLoader
 
 
 MODEL_ID = "google/gemma-4-E2B-it"

@@ -3,27 +3,29 @@ from torch.utils.data import Subset
 from kaggle_dataloader import KaggleDataLoader
 from gemma import GemmaModel
 from training_loops import TrainingLoops
-from hf_math_500_loader import MathDataset
+from hf_math_loader import MathDataset
 
 MODEL_ID = "google/gemma-4-E2B-it"
 PATH = "/Users/johntsoi/.cache/kagglehub/datasets/alpie/mathreasoning/versions/1"
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--samples', type= int, default = 100)
-    parser.add_argument('--verbose',action = 'store_true')
-    parser.add_argument('--ep',type=int,default=1)
-    parser.add_argument('--lr',type=float,default=0.0001)
-    parser.add_argument('--gstep',type=int,default=2)
-    parser.add_argument('--bsize', type=int, default = 1)
-    parser.add_argument('--tp',type=float,default=0.8)
+    parser.add_argument('--samples', type=int, default=500)
+    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--ep', type=int, default=5)
+    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--gstep', type=int, default=2)
+    parser.add_argument('--bsize', type=int, default=1)
+    parser.add_argument('--tp', type=float, default=0.8)
     parser.add_argument('--vp', type=float, default=0.2)
+    parser.add_argument('--outdir', type=str, default="./checkpoints")
     args = parser.parse_args()
 
-    #dataset = KaggleDataLoader(PATH)
+    # dataset = KaggleDataLoader(PATH)
     dataset = MathDataset()
     model = GemmaModel(MODEL_ID)
-
+    print(f"Lenght of the dataset: {len(dataset)}")
     dataset = Subset(
         dataset,
         range(
@@ -39,12 +41,10 @@ def main():
         batch_size=args.bsize,
         gradient_accumulation_steps=args.gstep,
         epochs=args.ep,
-        lr=args.lr
+        lr=args.lr,
+        output_dir=args.outdir
     )
     training.train()
-    
-
-    
 
 
 if __name__ == "__main__":

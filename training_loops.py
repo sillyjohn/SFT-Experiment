@@ -1,19 +1,20 @@
 import math
 import os
 import torch
-from torch.utils.data import DataLoader,random_split, Dataset
+from torch.utils.data import DataLoader, random_split, Dataset
 from transformers import get_linear_schedule_with_warmup
 
+
 class TrainingLoops:
-    def __init__(self, model, 
-                    dataset,
-                    training_portion=0.8, validation_portion=0.2,
-                    batch_size = 4,
-                    epochs = 20,
-                    lr = 1e-4,
-                    gradient_accumulation_steps=4,
-                    output_dir="./checkpoints"  
-                ):
+    def __init__(self, model,
+                 dataset,
+                 training_portion=0.8, validation_portion=0.2,
+                 batch_size=4,
+                 epochs=20,
+                 lr=1e-4,
+                 gradient_accumulation_steps=4,
+                 output_dir="./checkpoints"
+                 ):
 
         self.model = model
         self.dataset = dataset
@@ -27,7 +28,8 @@ class TrainingLoops:
         self.train_set, self.validation_set = random_split(
             dataset,
             [training_portion, validation_portion],
-            generator=torch.Generator().manual_seed(42) #Ensure we get the same train/validation split every time the program runs
+            generator=torch.Generator().manual_seed(42)
+            # Ensure we get the same train/validation split every time the program runs
         )
         # DataLoader setup
         self.train_loader = DataLoader(self.train_set, self.batch_size, shuffle=True)
@@ -82,7 +84,7 @@ class TrainingLoops:
                 print(f"Sample: Step {i + 1}: {loss:.4f}")
             average_loss = total_loss / 20
             print(f"Sample: Average loss:{average_loss}")
-                
+
     def validate(self):
 
         print("\nRunning validation...")
@@ -98,21 +100,21 @@ class TrainingLoops:
                 batch_size = len(questions)
 
                 total_loss += loss.item() * batch_size
-                
+
                 total_samples += batch_size
         average_loss = (
-            total_loss
-            / total_samples
+                total_loss
+                / total_samples
         )
         return average_loss
 
-    def train(self): # Default 20 epochs
+    def train(self):  # Default 20 epochs
         for epoch in range(self.epochs):
             print(f"\n{'=' * 50}")
             print(f"Starting Epoch {epoch + 1}/{self.epochs}")
             print(f"{'=' * 50}")
-            self.model.model.train() # Set to Training mode
-            self.optimizer.zero_grad() # Reset Gradient
+            self.model.model.train()  # Set to Training mode
+            self.optimizer.zero_grad()  # Reset Gradient
             total_loss = 0.0
             total_examples = 0
 
@@ -123,22 +125,20 @@ class TrainingLoops:
                 )
                 questions = batch["question"]
                 answers = batch["answer"]
-            
+
                 # Forward Pass
-                loss = self.model.calculate_batch_loss(questions,answers)
+                loss = self.model.calculate_batch_loss(questions, answers)
                 print(f"  Raw batch loss: {loss.item():.4f}")
                 batch_size = len(questions)
                 total_loss += (
-                    loss.item()
-                    * batch_size
+                        loss.item()
+                        * batch_size
                 )
                 total_examples += batch_size
 
                 scaled_loss = loss / self.gradient_accumulation_steps
 
                 scaled_loss.backward()
-
-
 
                 # Update every 4 batch
                 should_update = (batch_idx + 1) % self.gradient_accumulation_steps == 0
@@ -169,7 +169,6 @@ class TrainingLoops:
                         f"| LR: {current_lr:.8f}"
                     )
 
-
                     if self.global_step % 10 == 0:
                         print(
                             f"Epoch "
@@ -184,7 +183,7 @@ class TrainingLoops:
                     # Checkpoint
                     # --------------------------
 
-                    if self.global_step % 500 == 0:
+                    if self.global_step % 50 == 0:
                         self.save_checkpoint(epoch)
                 else:
                     print("  -> Accumulating gradients")
@@ -196,6 +195,7 @@ class TrainingLoops:
             print(f"Average validation loss: {validation_loss:.4f}")
             print(f"Global optimizer steps:  {self.global_step}")
             print("=" * 50)
+            self.save_checkpoint(epoch)
 
     def save_checkpoint(self, epoch):
 
@@ -248,4 +248,3 @@ class TrainingLoops:
 
 
 
-        
