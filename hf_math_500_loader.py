@@ -1,7 +1,18 @@
 from datasets import load_dataset
+from torch.utils.data import Dataset
 
-ds = load_dataset("qwedsacf/competition_math")
+class MathDataset(Dataset):
+    def __init__(self, dataset_name="HuggingFaceH4/MATH-500", split="test"):
+        self.dataset = load_dataset(dataset_name, split=split)
+        self.dataset = self.dataset.select_columns(["problem", "solution"])
 
-for split, dataset in ds.items():
-    for cache_file in dataset.cache_files:
-        print(split, cache_file["filename"])
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        sample = self.dataset[index]
+
+        return {
+            "question": sample["problem"],
+            "answer": sample["solution"]
+        }

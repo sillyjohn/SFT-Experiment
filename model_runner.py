@@ -3,7 +3,7 @@ from torch.utils.data import Subset
 from kaggle_dataloader import KaggleDataLoader
 from gemma import GemmaModel
 from training_loops import TrainingLoops
-
+from hf_math_500_loader import MathDataset
 
 MODEL_ID = "google/gemma-4-E2B-it"
 PATH = "/Users/johntsoi/.cache/kagglehub/datasets/alpie/mathreasoning/versions/1"
@@ -20,7 +20,8 @@ def main():
     parser.add_argument('--vp', type=float, default=0.2)
     args = parser.parse_args()
 
-    dataset = KaggleDataLoader(PATH)
+    #dataset = KaggleDataLoader(PATH)
+    dataset = MathDataset()
     model = GemmaModel(MODEL_ID)
 
     dataset = Subset(
